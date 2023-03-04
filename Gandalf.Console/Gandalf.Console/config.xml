@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<root>
+	<setting name="repsDir" value=""/>
+	<setting name="apiKey" value=""/>
+	<setting name="chatId" value=""/>
+</root>
