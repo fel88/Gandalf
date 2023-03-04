@@ -1,0 +1,48 @@
+﻿using LibGit2Sharp;
+using LibGit2Sharp.Handlers;
+
+namespace Gandalf
+{
+    public class GitService
+    {
+        public string Username;
+        public string Password;
+        public string Email;
+
+        public void Checkout(CommitInfo cmt)
+        {
+
+            using (var r = new Repository(cmt.Rep.Path))
+            {
+                var cm = r.Commits.First(z => z.Sha == cmt.Sha);
+                LibGit2Sharp.Commands.Checkout(r, cm);
+
+            }
+        }
+
+        
+        public void Pull(RepositoryInfo rep)
+        {
+            using (var r = new Repository(rep.Path))
+            {
+                LibGit2Sharp.PullOptions options = new LibGit2Sharp.PullOptions();
+                options.FetchOptions = new FetchOptions();
+                options.FetchOptions.CredentialsProvider = new CredentialsHandler(
+                    (url, usernameFromUrl, types) =>
+                        new UsernamePasswordCredentials()
+                        {
+                            Username = Username,
+                            Password = Password
+                        });
+
+                // User information to create a merge commit
+                var signature = new LibGit2Sharp.Signature(
+                    new Identity(Username, Email), DateTimeOffset.Now);
+
+                // Pull
+                LibGit2Sharp.Commands.Pull(r, signature, options);
+
+            }
+        }
+    }
+}

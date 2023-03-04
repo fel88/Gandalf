@@ -3,4 +3,5 @@
 	<setting name="repsDir" value=""/>
 	<setting name="apiKey" value=""/>
 	<setting name="chatId" value=""/>
+	<setting name="msbuildPath" value=""/>
 </root>

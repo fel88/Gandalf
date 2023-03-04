@@ -6,6 +6,7 @@ using Telegram.Bot.Types;
 using System.Text;
 using LibGit2Sharp;
 using System.Xml.Linq;
+using Telegram.Bot.Types.InputFiles;
 
 namespace Gandalf
 {
@@ -121,6 +122,28 @@ namespace Gandalf
               text: sb.ToString(),
               cancellationToken: cancellationToken);
             }
+            else if (messageText.StartsWith("build"))
+            {
+                try
+                {
+                    MsbuildService ms = new MsbuildService();
+                    ms.MsBuildPath = msbuildPath;
+                    GitService gs = new GitService();
+                    var res = ms.Build(new RepositoryInfo() { Path = currentDir }, gs);
+
+                    Message sentMessage = await botClient.SendTextMessageAsync(
+          chatId: chatId,
+          text: res.ToString(),
+          cancellationToken: cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Message sentMessage = await botClient.SendTextMessageAsync(
+          chatId: chatId,
+          text: ex.Message,
+          cancellationToken: cancellationToken);
+                }
+            }
             else if (messageText.StartsWith("git status"))
             {
                 using (var repo = new Repository(currentDir))
@@ -157,16 +180,30 @@ namespace Gandalf
 
                 }
             }
-            else if (messageText.ToLower().StartsWith("cd"))
+            else if (messageText.StartsWith("cd.."))
+            {
+                var cd = new DirectoryInfo(currentDir);
+                currentDir = cd.Parent.FullName;
+                if (!new DirectoryInfo(currentDir).FullName.ToLower().StartsWith(new DirectoryInfo(repositoriesFolder).FullName.ToLower()))
+                {
+                    currentDir = repositoriesFolder;
+                }
+                Message sentMessage = await botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: "current dir: " + currentDir,
+            cancellationToken: cancellationToken);
+            }
+            else if (messageText.StartsWith("cd"))
             {
                 if (messageText.Contains(".."))
                 {
                     var cd = new DirectoryInfo(currentDir);
                     currentDir = cd.Parent.FullName;
-                    if (!currentDir.ToLower().StartsWith(repositoriesFolder))
+                    if (!new DirectoryInfo(currentDir).FullName.ToLower().StartsWith(new DirectoryInfo(repositoriesFolder).FullName.ToLower()))
                     {
+                        Console.WriteLine("reset current folder");
                         currentDir = repositoriesFolder;
-                    }
+                    }                    
                 }
                 else
                 if (messageText.Contains(' '))
@@ -176,10 +213,18 @@ namespace Gandalf
                     if (dd.GetDirectories().Any(z => z.Name.ToLower() == add.Trim().ToLower()))
                     {
                         currentDir = Path.Combine(currentDir, add);
-                        if (!currentDir.ToLower().StartsWith(repositoriesFolder))
+                        if (!new DirectoryInfo(currentDir).FullName.ToLower().StartsWith(new DirectoryInfo(repositoriesFolder).FullName.ToLower()))
                         {
+                            Console.WriteLine("reset current folder");
                             currentDir = repositoriesFolder;
                         }
+                    }
+                    else
+                    {
+                        await botClient.SendTextMessageAsync(
+          chatId: chatId,
+          text: $"{add} not found!",
+          cancellationToken: cancellationToken);
                     }
                 }
                 Message sentMessage = await botClient.SendTextMessageAsync(
@@ -199,6 +244,40 @@ namespace Gandalf
                     chatId: chatId,
                     text: ss,
                     cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    await botClient.SendTextMessageAsync(
+                 chatId: chatId,
+                 text: $"{add} not found!",
+                 cancellationToken: cancellationToken);
+                }
+
+            }
+            else if (messageText.ToLower().StartsWith("imgcat"))
+            {
+                var add = messageText.Substring(messageText.IndexOf(' ') + 1).Trim().ToLower();
+
+                var cd = new DirectoryInfo(currentDir);
+                if (cd.GetFiles().Any(z => z.Name.ToLower() == add.Trim().ToLower()))
+                {
+                    var path = Path.Combine(currentDir, add);
+                    using (var r = System.IO.File.OpenRead(path))
+                    {
+                        InputOnlineFile file = new InputOnlineFile(r, Path.GetFileName(path));
+
+                        Message sentMessage = await botClient.SendPhotoAsync(
+                        chatId: chatId,
+                        photo: file,
+                        cancellationToken: cancellationToken);
+                    }
+                }
+                else
+                {
+                    await botClient.SendTextMessageAsync(
+                 chatId: chatId,
+                 text: $"{add} not found!",
+                 cancellationToken: cancellationToken);
                 }
 
             }
