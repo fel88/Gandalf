@@ -38,6 +38,9 @@ namespace Gandalf
                     case "gitUsername":
                         gitUsername = vl;
                         break;
+                    case "gitBashPath":
+                        GitService.GitBashPath = vl;
+                        break;
                 }
             }
         }
@@ -106,7 +109,9 @@ namespace Gandalf
                 Console.WriteLine("unauthorized access from chatId: " + chatId);
                 return;
             }
+            var messageTextOrigin = messageText;
             messageText = messageText.ToLower().Trim();
+
             Console.WriteLine($"Received a '{messageText}' message in chat {chatId}.");
             if (messageText.ToLower().StartsWith("ls"))
             {
@@ -192,41 +197,66 @@ namespace Gandalf
           cancellationToken: cancellationToken);
                 }
             }
-            else if (messageText.StartsWith("git status"))
+            else if (false && messageText.StartsWith("git checkout"))
             {
-                using (var repo = new Repository(currentDir))
-                {
-                    Commit commit = repo.Head.Tip;
-                    Console.WriteLine("Author: {0}", commit.Author.Name);
-                    Console.WriteLine("Message: {0}", commit.MessageShort);
-                    var status = repo.RetrieveStatus();
+                GitService gs = new GitService();
 
-                    Tree commitTree = repo.Head.Tip.Tree;
-                    Tree parentCommitTree = repo.Head.Tip.Parents.Single().Tree;
+                var rep = new RepositoryInfo() { Path = currentDir };
+                rep.UpdateCommits();
 
-                    //var patch = repo.Diff.Compare<Patch>(commitTree, parentCommitTree);
-                    StringBuilder sb = new StringBuilder();
-                    foreach (var item in status)
+                var cmt = rep.Commits.First();
+                gs.Checkout(cmt); Message sentMessage = await botClient.SendTextMessageAsync(
+          chatId: chatId,
+          text: "done",
+          cancellationToken: cancellationToken);
+            }
+            else if (messageText.StartsWith("git "))
+            {
+                var cmd = messageTextOrigin.Substring(messageTextOrigin.IndexOf(' ') + 1).Trim();
+                GitService gs = new GitService();
+                var res = gs.GitExec(cmd, currentDir);
+                Message sentMessage = await botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: "status:\n" + res,
+            cancellationToken: cancellationToken);
+                if (false)
+                    using (var repo = new Repository(currentDir))
                     {
-                        sb.AppendLine($"{item.FilePath} {item.State}");
+                        Commit commit = repo.Head.Tip;
+                        Console.WriteLine("Author: {0}", commit.Author.Name);
+                        Console.WriteLine("Message: {0}", commit.MessageShort);
+                        var status = repo.RetrieveStatus();
+
+                        Tree commitTree = repo.Head.Tip.Tree;
+                        Tree parentCommitTree = repo.Head.Tip.Parents.Single().Tree;
+
+                        //var patch = repo.Diff.Compare<Patch>(commitTree, parentCommitTree);
+                        StringBuilder sb = new StringBuilder();
+                        foreach (var item in status)
+                        {
+                            if (item.State == FileStatus.Ignored)
+                                continue;
+
+                            sb.AppendLine($"{item.FilePath} {item.State}");
+                        }
+
+                        /*sb.AppendLine(string.Format("{0} files changed.", patch.Count()));
+
+                        foreach (var pec in patch)
+                        {
+                            sb.AppendLine(string.Format("{0} = {1} ({2}+ and {3}-)",
+                                pec.Path,
+                                pec.LinesAdded + pec.LinesDeleted,
+                                pec.LinesAdded,
+                                pec.LinesDeleted));
+                        }*/
+
+                        await botClient.SendTextMessageAsync(
+               chatId: chatId,
+               text: "status:\n" + sb.ToString(),
+               cancellationToken: cancellationToken);
+
                     }
-
-                    /*sb.AppendLine(string.Format("{0} files changed.", patch.Count()));
-
-                    foreach (var pec in patch)
-                    {
-                        sb.AppendLine(string.Format("{0} = {1} ({2}+ and {3}-)",
-                            pec.Path,
-                            pec.LinesAdded + pec.LinesDeleted,
-                            pec.LinesAdded,
-                            pec.LinesDeleted));
-                    }*/
-                    Message sentMessage = await botClient.SendTextMessageAsync(
-             chatId: chatId,
-             text: sb.ToString(),
-             cancellationToken: cancellationToken);
-
-                }
             }
             else if (messageText.StartsWith("cd.."))
             {
@@ -280,6 +310,38 @@ namespace Gandalf
               text: "current dir: " + currentDir,
               cancellationToken: cancellationToken);
             }
+            else if (messageText.ToLower().StartsWith("patch"))
+            {
+                var spl = messageText.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
+                var add = spl[0].Substring(messageText.IndexOf(' ') + 1).Trim().ToLower();
+                                
+                var code = messageTextOrigin.Substring(messageTextOrigin.IndexOf('\n') + 1).Trim();
+                var cd = new DirectoryInfo(currentDir);
+                if (cd.GetFiles().Any(z => z.Name.ToLower() == add.Trim().ToLower()))
+                {
+                    var path = Path.Combine(currentDir, add);
+                    System.IO.File.WriteAllText(path, code);
+
+                    await botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: $"file {add} was patched",
+            cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    await botClient.SendTextMessageAsync(
+             chatId: chatId,
+             text: $"{add} file not found ",
+             cancellationToken: cancellationToken);
+                }
+
+
+            }
+            else if (messageText.ToLower().StartsWith("shutdown"))
+            {
+                Environment.Exit(0);
+            }
+
             else if (messageText.ToLower().StartsWith("cat"))
             {
                 var add = messageText.Substring(messageText.IndexOf(' ') + 1).Trim().ToLower();

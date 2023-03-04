@@ -1,5 +1,7 @@
 ﻿using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
+using System.Diagnostics;
+using System.Text;
 
 namespace Gandalf
 {
@@ -8,6 +10,41 @@ namespace Gandalf
         public string Username;
         public string Password;
         public string Email;
+
+        public static string ExecuteGitBashCommand(string fileName, string command, string workingDir)
+        {
+
+            ProcessStartInfo processStartInfo = new ProcessStartInfo(fileName, "-c \" " + command + " \"")
+            {
+                WorkingDirectory = workingDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                CreateNoWindow = false
+            };
+
+            var process = new Process();
+            processStartInfo.FileName = "git";
+            processStartInfo.Arguments = command;
+            process.StartInfo = processStartInfo;
+
+            process.Start();
+
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            var exitCode = process.ExitCode;
+            process.WaitForExit();
+
+            process.Close();
+
+            return output + Environment.NewLine + error;
+        }
+        public static string GitBashPath = "C:\\Program Files\\Git\\git-bash.exe";
+        public string GitExec(string command, string workdir)
+        {
+            return ExecuteGitBashCommand(GitBashPath, command, workdir);
+        }
 
         public void Checkout(CommitInfo cmt)
         {
@@ -20,7 +57,7 @@ namespace Gandalf
             }
         }
 
-        
+
         public void Pull(RepositoryInfo rep)
         {
             using (var r = new Repository(rep.Path))
@@ -31,7 +68,7 @@ namespace Gandalf
                     (url, usernameFromUrl, types) =>
                         new UsernamePasswordCredentials()
                         {
-                            Username = Username,                            
+                            Username = Username,
                             Password = Password
                         });
 
