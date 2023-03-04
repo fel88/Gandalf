@@ -1,4 +1,6 @@
-﻿namespace Gandalf
+﻿using Microsoft.CodeAnalysis.Text;
+
+namespace Gandalf
 {
     public class CsharpClass
     {
@@ -31,6 +33,7 @@
     }
     public class CsSharpMethod
     {
+        public LinePositionSpan Span;
         public string Name;
         public string Body;
     }

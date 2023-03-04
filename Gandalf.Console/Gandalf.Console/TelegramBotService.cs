@@ -10,6 +10,8 @@ using Telegram.Bot.Types.InputFiles;
 using System.Threading;
 using Telegram.Bot.Requests;
 using Gandalf.Processors;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis;
 
 namespace Gandalf
 {
@@ -83,6 +85,7 @@ namespace Gandalf
             CancellationToken = cts.Token;
 
             Processors.Add(new FuncCommandProcessor(this));
+            Processors.Add(new PatchCommandProcessor(this));
             Processors.Add(new PingCommandProcessor(this));
             Processors.Add(new CatCommandProcessor(this));
             Processors.Add(new ParseCommandProcessor(this));
@@ -350,33 +353,7 @@ namespace Gandalf
               text: "current dir: " + currentDir,
               cancellationToken: cancellationToken);
             }
-            else if (messageText.ToLower().StartsWith("patch"))
-            {
-                var spl = messageText.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
-                var add = spl[0].Substring(messageText.IndexOf(' ') + 1).Trim().ToLower();
-
-                var code = messageTextOrigin.Substring(messageTextOrigin.IndexOf('\n') + 1).Trim();
-                var cd = new DirectoryInfo(currentDir);
-                if (cd.GetFiles().Any(z => z.Name.ToLower() == add.Trim().ToLower()))
-                {
-                    var path = Path.Combine(currentDir, add);
-                    System.IO.File.WriteAllText(path, code);
-
-                    await botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: $"file {add} was patched",
-            cancellationToken: cancellationToken);
-                }
-                else
-                {
-                    await botClient.SendTextMessageAsync(
-             chatId: chatId,
-             text: $"{add} file not found ",
-             cancellationToken: cancellationToken);
-                }
-
-
-            }
+            
             else if (messageText.ToLower().StartsWith("shutdown"))
             {
                 Environment.Exit(0);

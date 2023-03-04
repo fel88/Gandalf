@@ -41,8 +41,15 @@ namespace Gandalf
                 }
                 if (member is MethodDeclarationSyntax methodDeclaration)
                 {
+                    var line = tree.GetText().Lines.GetLinePositionSpan(member.Span);
+                    //var startLn = member.GetText().Lines[0].LineNumber;
                     var full = member.GetText().ToString();
-                    cls.Methods.Add(new CsSharpMethod() { Name = methodDeclaration.Identifier.ValueText, Body = full });
+                    cls.Methods.Add(new CsSharpMethod()
+                    {
+                        Span = line,
+                        Name = methodDeclaration.Identifier.ValueText,
+                        Body = full
+                    });
                     Console.WriteLine("Method: " + methodDeclaration.Identifier.ValueText);
                     Console.WriteLine("signature: " + full.Substring(0, full.IndexOf('{')));
                     cls.Members.Add(full.Substring(0, full.IndexOf('{')));
