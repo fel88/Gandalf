@@ -7,13 +7,16 @@ using System.Text;
 using LibGit2Sharp;
 using System.Xml.Linq;
 using Telegram.Bot.Types.InputFiles;
+using System.Threading;
+using Telegram.Bot.Requests;
+using Gandalf.Processors;
 
 namespace Gandalf
 {
-    public class TelegramBotService
+    public class TelegramBotService : ITelegramBotService
     {
         TelegramBotClient botClient;
-
+        List<ICommandProcessor> Processors = new List<ICommandProcessor>();
         public void LoadConfig()
         {
             var doc = XDocument.Load(configFileName);
@@ -77,6 +80,15 @@ namespace Gandalf
 
             using CancellationTokenSource cts = new();
 
+            CancellationToken = cts.Token;
+
+            Processors.Add(new FuncCommandProcessor(this));
+            Processors.Add(new PingCommandProcessor(this));
+            Processors.Add(new CatCommandProcessor(this));
+            Processors.Add(new ParseCommandProcessor(this));
+            Processors.Add(new EnterFileCommandProcessor(this));
+            Processors.Add(new ExitFileCommandProcessor(this));
+
             // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
             ReceiverOptions receiverOptions = new()
             {
@@ -94,6 +106,18 @@ namespace Gandalf
         }
 
         string currentDir = "c:\\git";
+
+        public string CurrentDir => currentDir;
+
+        public ITelegramBotClient Bot => botClient;
+
+        public long ChatId => targetChatId;
+
+        public CancellationToken CancellationToken { get; set; }
+        public string CurrentFile { get; set; }
+        public int CurrentFileLine { get; set; }
+        public BotMode Mode { get; set; }
+
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             // Only process Message updates: https://core.telegram.org/bots/api#message
@@ -113,10 +137,32 @@ namespace Gandalf
             messageText = messageText.ToLower().Trim();
 
             Console.WriteLine($"Received a '{messageText}' message in chat {chatId}.");
+
+            bool handled = false;
+            foreach (var item in Processors)
+            {
+                try
+                {
+                    if (await item.Process(messageTextOrigin))
+                    {
+                        handled = true;
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: ex.Message,
+            cancellationToken: cancellationToken);
+                }
+            }
+
+            if (handled)
+                return;
+
             if (messageText.ToLower().StartsWith("ls"))
             {
-
-
                 StringBuilder sb = new StringBuilder();
                 var d = new DirectoryInfo(currentDir);
                 currentDir = d.FullName;
@@ -133,14 +179,7 @@ namespace Gandalf
               text: sb.ToString(),
               cancellationToken: cancellationToken);
             }
-            else if (messageText.StartsWith("ping"))
-            {
-                var rep = "I am a servant of the Secret Fire, wielder of the flame of Anor";
-                await botClient.SendTextMessageAsync(
-             chatId: chatId,
-             text: rep,
-             cancellationToken: cancellationToken);
-            }
+
             else if (messageText.StartsWith("build"))
             {
 
@@ -288,8 +327,9 @@ namespace Gandalf
                 {
                     var add = messageText.Substring(messageText.IndexOf(' ') + 1);
                     var dd = new DirectoryInfo(currentDir);
-                    if (dd.GetDirectories().Any(z => z.Name.ToLower() == add.Trim().ToLower()))
+                    if (dd.GetDirectories().Any(z => z.Name.ToLower().Contains(add.Trim().ToLower())))
                     {
+                        add = dd.GetDirectories().First(z => z.Name.ToLower().Contains(add.Trim().ToLower())).Name;
                         currentDir = Path.Combine(currentDir, add);
                         if (!new DirectoryInfo(currentDir).FullName.ToLower().StartsWith(new DirectoryInfo(repositoriesFolder).FullName.ToLower()))
                         {
@@ -314,7 +354,7 @@ namespace Gandalf
             {
                 var spl = messageText.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
                 var add = spl[0].Substring(messageText.IndexOf(' ') + 1).Trim().ToLower();
-                                
+
                 var code = messageTextOrigin.Substring(messageTextOrigin.IndexOf('\n') + 1).Trim();
                 var cd = new DirectoryInfo(currentDir);
                 if (cd.GetFiles().Any(z => z.Name.ToLower() == add.Trim().ToLower()))
