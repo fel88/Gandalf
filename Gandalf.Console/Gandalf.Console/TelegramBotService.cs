@@ -35,12 +35,18 @@ namespace Gandalf
                     case "msbuildPath":
                         msbuildPath = vl;
                         break;
+                    case "gitUsername":
+                        gitUsername = vl;
+                        break;
                 }
             }
         }
 
         const string configFileName = "config.xml";
         string apiKey;
+        string gitUsername;
+        string gitEmail;
+        string gitPassword;
         long targetChatId;
         string repositoriesFolder;
         string msbuildPath;
@@ -122,19 +128,61 @@ namespace Gandalf
               text: sb.ToString(),
               cancellationToken: cancellationToken);
             }
+            else if (messageText.StartsWith("ping"))
+            {
+                var rep = "I am a servant of the Secret Fire, wielder of the flame of Anor";
+                await botClient.SendTextMessageAsync(
+             chatId: chatId,
+             text: rep,
+             cancellationToken: cancellationToken);
+            }
             else if (messageText.StartsWith("build"))
             {
+
                 try
                 {
                     MsbuildService ms = new MsbuildService();
                     ms.MsBuildPath = msbuildPath;
-                    GitService gs = new GitService();
-                    var res = ms.Build(new RepositoryInfo() { Path = currentDir }, gs);
+                    if (messageText.Contains("-verb:errors"))
+                    {
+                        ms.ErrorsOnly = true;
+                    }
+                    ms.ErrorsOnly = true;
 
-                    Message sentMessage = await botClient.SendTextMessageAsync(
-          chatId: chatId,
-          text: res.ToString(),
-          cancellationToken: cancellationToken);
+                    if (messageText.Contains("--help"))
+                    {
+                        await botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: "Build current dir solution with msbuild\nkeys:\n-verb:errors - show only compilation errors",
+                cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        GitService gs = new GitService();
+                        var res = ms.Build(new RepositoryInfo() { Path = currentDir }, gs).ToString();
+                        const int MessageLengthLimit = 3500;
+                        if (res.Length > MessageLengthLimit)
+                        {
+                            for (int i = 0; i < res.Length; i += MessageLengthLimit)
+                            {
+                                var res1 = res.Substring(i, MessageLengthLimit);
+                                Message sentMessage = await botClient.SendTextMessageAsync(
+        chatId: chatId,
+        text: res1,
+        cancellationToken: cancellationToken);
+                            }
+
+                        }
+                        else
+                        {
+
+
+                            Message sentMessage = await botClient.SendTextMessageAsync(
+                  chatId: chatId,
+                  text: res,
+                  cancellationToken: cancellationToken);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -203,7 +251,7 @@ namespace Gandalf
                     {
                         Console.WriteLine("reset current folder");
                         currentDir = repositoriesFolder;
-                    }                    
+                    }
                 }
                 else
                 if (messageText.Contains(' '))

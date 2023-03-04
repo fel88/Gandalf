@@ -41,7 +41,7 @@ namespace Gandalf
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.CreateNoWindow = true;
-            process.StartInfo.StandardOutputEncoding = Encoding.GetEncoding("cp866");
+            //process.StartInfo.StandardOutputEncoding = Encoding.GetEncoding("cp866");
             process.Start();
 
 
@@ -51,19 +51,26 @@ namespace Gandalf
             return log;
         }
 
-        public StringBuilder Build(RepositoryInfo rep, GitService gs)
+        public StringBuilder Build(RepositoryInfo rep, GitService gs, bool withPull = false)
         {
-            gs.Pull(rep);
+            if (withPull)
+                gs.Pull(rep);
+
             rep.UpdateCommits();
 
             var cmt = rep.Commits.First();
             return Build(cmt);
         }
 
+        public bool ErrorsOnly = false;
+
         public StringBuilder Build(CommitInfo cmt)
         {
             StringBuilder log = new StringBuilder();
-            var cmb = Path.Combine(cmt.Rep.Path, cmt.Rep.Projects.First().Path);
+
+            //var cmb = Path.Combine(cmt.Rep.Path, cmt.Rep.Projects.First().Path);
+            var cmb = Path.Combine(cmt.Rep.Path);
+
             //File.WriteAllLines("temp.bat", new string[] { "cd \""+ MsBuildPath+"\"", MsBuildPath2, "msbuild \"" + cmb+"\"" });
             Process process = new Process();
             process.StartInfo.FileName = MsBuildPath;
@@ -76,7 +83,9 @@ namespace Gandalf
             process.StartInfo.RedirectStandardOutput = true;
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.CreateNoWindow = true;
-            process.StartInfo.StandardOutputEncoding = Encoding.GetEncoding("cp866");
+
+            //process.StartInfo.StandardOutputEncoding = Encoding.GetEncoding("cp866");
+
             process.Start();
             //* Read the output (or the error)
             log.Clear();
@@ -91,9 +100,18 @@ namespace Gandalf
             foreach (var s in spl)
             {
                 var low = s.ToLower();
-                if (!low.Contains("errorreport") && (low.Contains("error") || low.Contains("ошибка") || low.Contains("ошибок")))
+                if (ErrorsOnly)
+                {
+                    bool error = !low.Contains("errorreport") && (low.Contains("error") || low.Contains("ошибка") || low.Contains("ошибок"));
+                    if (error || low.Contains("done") || low.Contains("succeeded"))
+                    {
+                        log.AppendLine(low);
+                    }
+                }
+                else
                 {
                     log.AppendLine(low);
+
                 }
             }
 

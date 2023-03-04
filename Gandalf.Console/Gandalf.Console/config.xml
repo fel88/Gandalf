@@ -4,4 +4,7 @@
 	<setting name="apiKey" value=""/>
 	<setting name="chatId" value=""/>
 	<setting name="msbuildPath" value=""/>
+	<setting name="gitUsername" value=""/>
+	<setting name="gitEmail" value=""/>
+	<setting name="gitPassword" value=""/>
 </root>

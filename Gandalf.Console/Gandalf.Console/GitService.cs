@@ -31,7 +31,7 @@ namespace Gandalf
                     (url, usernameFromUrl, types) =>
                         new UsernamePasswordCredentials()
                         {
-                            Username = Username,
+                            Username = Username,                            
                             Password = Password
                         });
 
