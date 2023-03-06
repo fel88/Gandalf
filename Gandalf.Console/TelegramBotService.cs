@@ -84,6 +84,7 @@ namespace Gandalf
 
             CancellationToken = cts.Token;
 
+            Processors.Add(new GitCommandProcessor(this) );
             Processors.Add(new FuncCommandProcessor(this));
             Processors.Add(new PatchCommandProcessor(this));
             Processors.Add(new PingCommandProcessor(this));
@@ -120,7 +121,7 @@ namespace Gandalf
         public string CurrentFile { get; set; }
         public int CurrentFileLine { get; set; }
         public BotMode Mode { get; set; }
-
+public bool EchoMode=false;
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             // Only process Message updates: https://core.telegram.org/bots/api#message
@@ -134,6 +135,10 @@ namespace Gandalf
             if (chatId != targetChatId)
             {
                 Console.WriteLine("unauthorized access from chatId: " + chatId);
+                return;
+            }
+            if(EchoMode){
+Console. WriteLine(messageText);
                 return;
             }
             var messageTextOrigin = messageText;
@@ -252,7 +257,7 @@ namespace Gandalf
           text: "done",
           cancellationToken: cancellationToken);
             }
-            else if (messageText.StartsWith("git "))
+            else if (false && messageText.StartsWith("git "))
             {
                 var cmd = messageTextOrigin.Substring(messageTextOrigin.IndexOf(' ') + 1).Trim();
                 GitService gs = new GitService();

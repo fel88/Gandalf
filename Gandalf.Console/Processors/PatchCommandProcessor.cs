@@ -19,7 +19,7 @@ namespace Gandalf.Processors
             if (!messageText.Trim().ToLower().StartsWith("patch "))
                 return false;
 
-            var spl = messageText.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
+            var spl = messageText.Replace((char)0xA0,' ') .Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
             var spl1 = spl[0].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
 
             if (service.Mode == BotMode.File)
