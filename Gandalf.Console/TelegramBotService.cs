@@ -84,7 +84,9 @@ namespace Gandalf
 
             CancellationToken = cts.Token;
 
-            Processors.Add(new GitCommandProcessor(this) );
+            Processors.Add(new CmdCommandProcessor(this));
+            Processors.Add(new GhCommandProcessor(this));
+            Processors.Add(new GitCommandProcessor(this));
             Processors.Add(new FuncCommandProcessor(this));
             Processors.Add(new PatchCommandProcessor(this));
             Processors.Add(new PingCommandProcessor(this));
@@ -121,7 +123,7 @@ namespace Gandalf
         public string CurrentFile { get; set; }
         public int CurrentFileLine { get; set; }
         public BotMode Mode { get; set; }
-public bool EchoMode=false;
+        public bool EchoMode = false;
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             // Only process Message updates: https://core.telegram.org/bots/api#message
@@ -137,10 +139,19 @@ public bool EchoMode=false;
                 Console.WriteLine("unauthorized access from chatId: " + chatId);
                 return;
             }
-            if(EchoMode){
-Console. WriteLine(messageText);
+            if (EchoMode)
+            {
+                Console.WriteLine(messageText);
                 return;
             }
+
+            //skip previous messages
+            /*if (message.Date < Program.StartTimestamp)
+            {
+                Console.WriteLine($"skipped: {messageText}");
+                return;
+            }*/
+
             var messageTextOrigin = messageText;
             messageText = messageText.ToLower().Trim();
 
@@ -212,12 +223,12 @@ Console. WriteLine(messageText);
                     {
                         GitService gs = new GitService();
                         var res = ms.Build(new RepositoryInfo() { Path = currentDir }, gs).ToString();
-                        const int MessageLengthLimit = 3500;
-                        if (res.Length > MessageLengthLimit)
+
+                        if (res.Length > Constants.MessageLengthLimit)
                         {
-                            for (int i = 0; i < res.Length; i += MessageLengthLimit)
+                            for (int i = 0; i < res.Length; i += Constants.MessageLengthLimit)
                             {
-                                var res1 = res.Substring(i, MessageLengthLimit);
+                                var res1 = res.Substring(i, Constants.MessageLengthLimit);
                                 Message sentMessage = await botClient.SendTextMessageAsync(
         chatId: chatId,
         text: res1,
@@ -256,54 +267,6 @@ Console. WriteLine(messageText);
           chatId: chatId,
           text: "done",
           cancellationToken: cancellationToken);
-            }
-            else if (false && messageText.StartsWith("git "))
-            {
-                var cmd = messageTextOrigin.Substring(messageTextOrigin.IndexOf(' ') + 1).Trim();
-                GitService gs = new GitService();
-                var res = gs.GitExec(cmd, currentDir);
-                Message sentMessage = await botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: "status:\n" + res,
-            cancellationToken: cancellationToken);
-                if (false)
-                    using (var repo = new Repository(currentDir))
-                    {
-                        Commit commit = repo.Head.Tip;
-                        Console.WriteLine("Author: {0}", commit.Author.Name);
-                        Console.WriteLine("Message: {0}", commit.MessageShort);
-                        var status = repo.RetrieveStatus();
-
-                        Tree commitTree = repo.Head.Tip.Tree;
-                        Tree parentCommitTree = repo.Head.Tip.Parents.Single().Tree;
-
-                        //var patch = repo.Diff.Compare<Patch>(commitTree, parentCommitTree);
-                        StringBuilder sb = new StringBuilder();
-                        foreach (var item in status)
-                        {
-                            if (item.State == FileStatus.Ignored)
-                                continue;
-
-                            sb.AppendLine($"{item.FilePath} {item.State}");
-                        }
-
-                        /*sb.AppendLine(string.Format("{0} files changed.", patch.Count()));
-
-                        foreach (var pec in patch)
-                        {
-                            sb.AppendLine(string.Format("{0} = {1} ({2}+ and {3}-)",
-                                pec.Path,
-                                pec.LinesAdded + pec.LinesDeleted,
-                                pec.LinesAdded,
-                                pec.LinesDeleted));
-                        }*/
-
-                        await botClient.SendTextMessageAsync(
-               chatId: chatId,
-               text: "status:\n" + sb.ToString(),
-               cancellationToken: cancellationToken);
-
-                    }
             }
             else if (messageText.StartsWith("cd.."))
             {
@@ -358,33 +321,20 @@ Console. WriteLine(messageText);
               text: "current dir: " + currentDir,
               cancellationToken: cancellationToken);
             }
-            
+
             else if (messageText.ToLower().StartsWith("shutdown"))
             {
-                Environment.Exit(0);
-            }
-
-            else if (messageText.ToLower().StartsWith("cat"))
-            {
-                var add = messageText.Substring(messageText.IndexOf(' ') + 1).Trim().ToLower();
-
-                var cd = new DirectoryInfo(currentDir);
-                if (cd.GetFiles().Any(z => z.Name.ToLower() == add.Trim().ToLower()))
+                await botClient.SendTextMessageAsync(
+              chatId: chatId,
+              text: "terminating...",
+              cancellationToken: cancellationToken);
+                Thread th = new Thread(() =>
                 {
-                    var ss = System.IO.File.ReadAllText(Path.Combine(currentDir, add));
-                    Message sentMessage = await botClient.SendTextMessageAsync(
-                    chatId: chatId,
-                    text: ss,
-                    cancellationToken: cancellationToken);
-                }
-                else
-                {
-                    await botClient.SendTextMessageAsync(
-                 chatId: chatId,
-                 text: $"{add} not found!",
-                 cancellationToken: cancellationToken);
-                }
-
+                    Thread.Sleep(2000);
+                    Environment.Exit(0);
+                });
+                th.IsBackground = true;
+                th.Start();
             }
             else if (messageText.ToLower().StartsWith("imgcat"))
             {
@@ -411,22 +361,14 @@ Console. WriteLine(messageText);
                  text: $"{add} not found!",
                  cancellationToken: cancellationToken);
                 }
-
             }
             else
             {
-
                 Message sentMessage = await botClient.SendTextMessageAsync(
                     chatId: chatId,
                     text: "Sorry, melon. Unknown command\n",
                     cancellationToken: cancellationToken);
             }
-            /*
-            // Echo received message text
-            Message sentMessage = await botClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: "You said:\n" + messageText,
-                cancellationToken: cancellationToken);*/
         }
 
         Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)

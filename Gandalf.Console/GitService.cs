@@ -11,7 +11,7 @@ namespace Gandalf
         public string Password;
         public string Email;
 
-        public static string ExecuteGitBashCommand(string fileName, string command, string workingDir)
+        public static string ExecuteCommand(string fileName, string command, string workingDir)
         {
 
             ProcessStartInfo processStartInfo = new ProcessStartInfo(fileName, "-c \" " + command + " \"")
@@ -25,7 +25,7 @@ namespace Gandalf
             };
 
             var process = new Process();
-            processStartInfo.FileName = "git";
+            processStartInfo.FileName = fileName;
             processStartInfo.Arguments = command;
             process.StartInfo = processStartInfo;
 
@@ -40,10 +40,19 @@ namespace Gandalf
 
             return output + Environment.NewLine + error;
         }
+        
+
         public static string GitBashPath = "C:\\Program Files\\Git\\git-bash.exe";
+        public static string GhCliPath = "C:\\Program Files\\GitHub CLI\\gh.exe";
         public string GitExec(string command, string workdir)
         {
-            return ExecuteGitBashCommand(GitBashPath, command, workdir);
+            //return ExecuteCommand(GitBashPath, command, workdir);
+            return ExecuteCommand("git", command, workdir);
+        }
+        public string GhExec(string command, string workdir)
+        {
+            //return ExecuteCommand(GitBashPath, command, workdir);
+            return ExecuteCommand("gh", command, workdir);
         }
 
         public void Checkout(CommitInfo cmt)

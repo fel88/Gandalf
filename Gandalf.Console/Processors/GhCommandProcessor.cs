@@ -2,21 +2,20 @@
 
 namespace Gandalf.Processors
 {
-    public class GitCommandProcessor : CommandProcessor, ICommandProcessor
+    public class GhCommandProcessor : CommandProcessor, ICommandProcessor
     {
-        public GitCommandProcessor(ITelegramBotService service) : base(service)
+        public GhCommandProcessor(ITelegramBotService service) : base(service)
         {
         }
 
         public async Task<bool> Process(string message)
         {
-            if (!message.ToLower().Trim().StartsWith("git"))
+            if (!message.ToLower().Trim().StartsWith("gh"))
                 return false;
-
 
             var cmd = message.Substring(message.IndexOf(' ') + 1).Trim();
             GitService gs = new GitService();
-            var res = gs.GitExec(cmd, service.CurrentDir);
+            var res = gs.GhExec(cmd, service.CurrentDir);
             await service.Bot.SendTextMessageAsync(
        chatId: service.ChatId,
        text: "status:\n" + res,
