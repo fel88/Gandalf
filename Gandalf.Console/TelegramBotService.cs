@@ -1,4 +1,4 @@
-﻿using Telegram.Bot.Polling;
+using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
@@ -84,6 +84,7 @@ namespace Gandalf
 
             CancellationToken = cts.Token;
 
+             Processors.Add(new ReplaceCommandProcessor(this));
             Processors.Add(new DeleteCommandProcessor(this));
             Processors.Add(new InsertCommandProcessor(this));
             Processors.Add(new CmdCommandProcessor(this));
