@@ -14,6 +14,8 @@ namespace Gandalf
 
             foreach (var member in members)
             {
+                var line = tree.GetText().Lines.GetLinePositionSpan(member.Span);
+
                 if (member is PropertyDeclarationSyntax property)
                 {
                     cls.Properties.Add(new CsharpClass.CsharpProperty(
@@ -24,7 +26,7 @@ namespace Gandalf
                     var full = member.GetText().ToString().Trim();
 
                     Console.WriteLine("prop: " + property.Identifier.ValueText + "   " + full);
-                    cls.Members.Add(full.Trim());
+                    cls.Members.Add(new CsSharpMember() { Signature=full. Trim() });
                 }
                 if (member is ConstructorDeclarationSyntax ctr)
                 {
@@ -32,7 +34,7 @@ namespace Gandalf
                     var full = member.GetText().ToString().Trim();
 
                     Console.WriteLine("ctr: " + ctr.Identifier.ValueText + "   " + full);
-                    cls.Members.Add(full.Substring(0, full.IndexOf('{')));
+                    cls.Members.Add(new CsSharpMember() { Signature = full.Substring(0, full.IndexOf('{')) });
                 }
 
                 if (member is NamespaceDeclarationSyntax namespaceDeclaration)
@@ -41,18 +43,19 @@ namespace Gandalf
                 }
                 if (member is MethodDeclarationSyntax methodDeclaration)
                 {
-                    var line = tree.GetText().Lines.GetLinePositionSpan(member.Span);
+                    //var line = tree.GetText().Lines.GetLinePositionSpan(member.Span);
                     //var startLn = member.GetText().Lines[0].LineNumber;
                     var full = member.GetText().ToString();
-                    cls.Methods.Add(new CsSharpMethod()
+                    cls.Members.Add(new CsSharpMethod()
                     {
                         Span = line,
                         Name = methodDeclaration.Identifier.ValueText,
-                        Body = full
-                    });
+                        Body = full,
+                        Signature=(full.Substring(0, full.IndexOf('{')))
+
+                });
                     Console.WriteLine("Method: " + methodDeclaration.Identifier.ValueText);
                     Console.WriteLine("signature: " + full.Substring(0, full.IndexOf('{')));
-                    cls.Members.Add(full.Substring(0, full.IndexOf('{')));
                 }
 
                 if (member is ClassDeclarationSyntax classDeclaration)

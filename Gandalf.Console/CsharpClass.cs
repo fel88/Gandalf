@@ -1,11 +1,11 @@
-﻿using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Gandalf
 {
     public class CsharpClass
     {
-        public List<CsSharpMethod> Methods = new List<CsSharpMethod>();
-        public List<string> Members = new List<string>();
+        public CsSharpMethod[] Methods => Members.OfType<CsSharpMethod>().ToArray();
+        public List<CsSharpMember> Members = new List<CsSharpMember>();
         public string Name { get; set; }
 
         public string Namespace { get; set; }
@@ -17,6 +17,7 @@ namespace Gandalf
         public class CsharpProperty
         {
             public string Name { get; set; }
+
             public string Type { get; set; }
 
             public CsharpProperty(string name, string type)
@@ -31,10 +32,16 @@ namespace Gandalf
             Properties = new List<CsharpProperty>();
         }
     }
-    public class CsSharpMethod
+
+    public class CsSharpMethod : CsSharpMember
+    {
+    }
+
+    public class CsSharpMember
     {
         public LinePositionSpan Span;
         public string Name;
         public string Body;
+        public string Signature;
     }
 }
