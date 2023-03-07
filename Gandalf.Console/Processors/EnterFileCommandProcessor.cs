@@ -21,9 +21,8 @@ public async Task<bool> Process(string messageText)
 var cands=cd.GetFiles().Where(z => z.Name.ToLower().Contains(add.Trim().ToLower())) . ToArray() ;
             if (cands.Any())
             {
-                add = cands[0].Name;
-if(cands.Any(z=>z.Name.ToLower()==add.Trim().ToLower()))
-add=cands.First(z=>z.Name.ToLower()==add.Trim().ToLower()).Name;
+ if(!cands.Any(z=>z.Name.ToLower()==add.Trim().ToLower()))
+add=cands[0].Name;
                 service.CurrentFile = Path.Combine(currentDir, add);
                 service.Mode = BotMode.File;
                 Message sentMessage = await service.Bot.SendTextMessageAsync(
