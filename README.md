@@ -36,4 +36,7 @@ cat <start line>  <lines qty> # display lines of file
 patch <func name>\n<code> # replace specific function code
 parse <lines qty> # show functions list
 parse <start line> <lines qty> # show functions list
+insert <line>\n<code> #insert line
+delete <line>\n<code> # delete line
+replace <line>\n<code> # replace line
 ```

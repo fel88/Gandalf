@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Telegram.Bot;
 
 namespace Gandalf.Processors
@@ -35,7 +35,7 @@ namespace Gandalf.Processors
                 for (int i = start; i < Math.Min(csharpClass.Members.Count, start + lines); i++)
                 {
                     var m = csharpClass.Members[i + service.CurrentFileLine];
-                    sb.AppendLine(i + $": [{m.Span.Start.Line }-{m.Span.End.Line }] " + csharpClass.Members[i + service.CurrentFileLine]);
+                     sb.AppendLine(i + $": [{m.Span.Start.Line }-{m.Span.End.Line }] " + csharpClass.Members[i + service.CurrentFileLine].Signature);
                 }
                 await service.Bot.SendTextMessageAsync(
                         chatId: service.ChatId,

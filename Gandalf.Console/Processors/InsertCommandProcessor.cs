@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -25,7 +25,8 @@ namespace Gandalf.Processors
                 //var arr = ss. Split(new char[] { '\n' }).ToArray();
                 StringBuilder sb = new StringBuilder();
                 int line = int.Parse(spl[1]);
-                string newline = messageText.Substring(messageText.IndexOf('\n') + 1).Replace((char)0xa0, ' ');
+                 string newline = string. Empty;
+         if(messageText.IndexOf('\n')!=-1)       newline= messageText.Substring(messageText.IndexOf('\n') + 1).Replace((char)0xa0, ' ');
                 var ss2 = ss.Take(line).Concat(new[] { newline }).Concat(ss.Skip(line)).ToArray();
                 System.IO.File.WriteAllLines(service.CurrentFile, ss2);
 
