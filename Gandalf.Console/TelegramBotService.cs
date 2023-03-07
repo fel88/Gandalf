@@ -84,6 +84,8 @@ namespace Gandalf
 
             CancellationToken = cts.Token;
 
+            Processors.Add(new DeleteCommandProcessor(this));
+            Processors.Add(new InsertCommandProcessor(this));
             Processors.Add(new CmdCommandProcessor(this));
             Processors.Add(new GhCommandProcessor(this));
             Processors.Add(new GitCommandProcessor(this));

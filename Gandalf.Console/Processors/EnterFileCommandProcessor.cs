@@ -10,7 +10,7 @@ namespace Gandalf.Processors
 
         }
 
-        public async Task<bool> Process(string messageText)
+public async Task<bool> Process(string messageText)
         {
             if (!messageText.Trim().ToLower().StartsWith("enter "))
                 return false;
@@ -18,14 +18,17 @@ namespace Gandalf.Processors
             var add = spl[1];
             var currentDir = service.CurrentDir;
             var cd = new DirectoryInfo(currentDir);
-            if (cd.GetFiles().Any(z => z.Name.ToLower().Contains(add.Trim().ToLower())))
+var cands=cd.GetFiles().Where(z => z.Name.ToLower().Contains(add.Trim().ToLower())) . ToArray() ;
+            if (cands.Any())
             {
-                add = cd.GetFiles().First(z => z.Name.ToLower().Contains(add.Trim().ToLower())).Name;
+                add = cands[0].Name;
+if(cands.Any(z=>z.Name.ToLower()==add.Trim().ToLower()))
+add=cands.First(z=>z.Name.ToLower()==add.Trim().ToLower()).Name;
                 service.CurrentFile = Path.Combine(currentDir, add);
                 service.Mode = BotMode.File;
                 Message sentMessage = await service.Bot.SendTextMessageAsync(
                 chatId: service.ChatId,
-                text: "file entered",
+                text: "file entered: "+service.CurrentFile,
                 cancellationToken: service.CancellationToken);
             }
             else

@@ -34,11 +34,12 @@ namespace Gandalf.Processors
 
                 for (int i = start; i < Math.Min(csharpClass.Members.Count, start + lines); i++)
                 {
-                    sb.AppendLine(i + ": " + csharpClass.Members[i + service.CurrentFileLine]);
+                    var m = csharpClass.Members[i + service.CurrentFileLine];
+                    sb.AppendLine(i + $": [{m.Span.Start.Line }-{m.Span.End.Line }] " + csharpClass.Members[i + service.CurrentFileLine]);
                 }
                 await service.Bot.SendTextMessageAsync(
                         chatId: service.ChatId,
-                        text: "total lines: " + csharpClass.Members.Count + "\n" + sb.ToString(),
+                        text: "total members: " + csharpClass.Members.Count + "\n" + sb.ToString(),
                         cancellationToken: service.CancellationToken);
                 return true;
             }
@@ -52,7 +53,7 @@ namespace Gandalf.Processors
                 StringBuilder sb = new StringBuilder();
                 foreach (var cc in csharpClass.Members)
                 {
-                    sb.AppendLine(cc);
+                    sb.AppendLine(cc.Signature );
                 }
                 var str = sb.ToString();
                 if (str.Length > Constants.MessageLengthLimit)
