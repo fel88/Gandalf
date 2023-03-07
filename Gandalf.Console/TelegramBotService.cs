@@ -84,6 +84,7 @@ namespace Gandalf
 
             CancellationToken = cts.Token;
 
+              Processors.Add(new ImgCatCommandProcessor(this));
              Processors.Add(new ReplaceCommandProcessor(this));
             Processors.Add(new DeleteCommandProcessor(this));
             Processors.Add(new InsertCommandProcessor(this));

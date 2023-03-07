@@ -14,7 +14,7 @@ namespace Gandalf.Processors
 
         public async Task<bool> Process(string messageText)
         {
-            if (!messageText.Trim().ToLower().StartsWith("insert "))
+             if (!messageText.Trim().ToLower().StartsWith("replace "))
                 return false;
 
             var spl1 = messageText.Trim().ToLower().Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
@@ -32,7 +32,7 @@ namespace Gandalf.Processors
 
                 await service.Bot.SendTextMessageAsync(
                         chatId: service.ChatId,
-                        text: "Inserted in line: " + line,
+       text: "replaced line: " + line,
                         cancellationToken: service.CancellationToken);
 
             }
