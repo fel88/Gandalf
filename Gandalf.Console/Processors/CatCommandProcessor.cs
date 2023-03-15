@@ -25,7 +25,7 @@ namespace Gandalf.Processors
                 int lines = 0;
                 var args = spl.Where(x => !x.Contains("-")).ToArray();
                 bool noLines = false;
-                if (args.Any(x => x.ToLower().Contains("--no-lines")))
+                if (spl.Any(x => x.ToLower().Contains("--no-lines")))
                     noLines = true;
                 if (args.Length == 3)
                 {
@@ -39,7 +39,7 @@ namespace Gandalf.Processors
                     if (noLines)
                         sb.AppendLine(arr[i + service.CurrentFileLine]);
                     else
-                    sb.AppendLine((i+1)+ ": " + arr[i + service.CurrentFileLine]);
+                        sb.AppendLine((i + 1) + ": " + arr[i + service.CurrentFileLine]);
                 }
 
                 await service.Bot.SendTextMessageAsync(chatId: service.ChatId, text: "total lines: " + arr.Length, cancellationToken: service.CancellationToken);
