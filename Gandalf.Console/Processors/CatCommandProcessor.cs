@@ -44,7 +44,6 @@ namespace Gandalf.Processors
 
                 await service.Bot.SendTextMessageAsync(chatId: service.ChatId, text: "total lines: " + arr.Length, cancellationToken: service.CancellationToken);
                 await service.Bot.SendTextMessageAsync(chatId: service.ChatId, text: sb.ToString(), cancellationToken: service.CancellationToken);
-                await service.Bot.SendTextMessageAsync(chatId: service.ChatId, text: "total lines: " + arr.Length + "\n" + sb.ToString(), cancellationToken: service.CancellationToken);
             }
             else
             {
