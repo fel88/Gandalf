@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Text.RegularExpressions;
 
@@ -26,7 +26,12 @@ namespace Gandalf
                     var full = member.GetText().ToString().Trim();
 
                     Console.WriteLine("prop: " + property.Identifier.ValueText + "   " + full);
-                    cls.Members.Add(new CsSharpMember() { Signature=full. Trim() });
+var signature=full. Trim() ;
+ if(signature. IndexOf('{')!=-1)
+signature =signature. Substring(0,signature. IndexOf('{')) ;
+               cls.Members.Add(new CsSharpMember() { Signature=signature. Trim(),
+Span=line,
+Body=full});
                 }
                 if (member is ConstructorDeclarationSyntax ctr)
                 {
