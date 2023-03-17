@@ -26,20 +26,29 @@ namespace Gandalf
                     var full = member.GetText().ToString().Trim();
 
                     Console.WriteLine("prop: " + property.Identifier.ValueText + "   " + full);
-var signature=full. Trim() ;
- if(signature. IndexOf('{')!=-1)
-signature =signature. Substring(0,signature. IndexOf('{')) ;
-               cls.Members.Add(new CsSharpMember() { Signature=signature. Trim(),
-Span=line,
-Body=full});
+                    var signature = full.Trim();
+
+                    if (signature.IndexOf('{') != -1)
+                        signature = signature.Substring(0, signature.IndexOf('{'));
+
+                    cls.Members.Add(new CsSharpMember()
+                    {
+                        Signature = signature.Trim(),
+                        Span = line,
+                        Body = full
+                    });
                 }
                 if (member is ConstructorDeclarationSyntax ctr)
                 {
-
                     var full = member.GetText().ToString().Trim();
 
                     Console.WriteLine("ctr: " + ctr.Identifier.ValueText + "   " + full);
-                    cls.Members.Add(new CsSharpMember() { Signature = full.Substring(0, full.IndexOf('{')) });
+                    cls.Members.Add(new CsSharpMember()
+                    {
+                        Signature = full.Substring(0, full.IndexOf('{')),
+                        Span = line,
+                        Body = full
+                    });
                 }
 
                 if (member is NamespaceDeclarationSyntax namespaceDeclaration)
@@ -56,9 +65,9 @@ Body=full});
                         Span = line,
                         Name = methodDeclaration.Identifier.ValueText,
                         Body = full,
-                        Signature=(full.Substring(0, full.IndexOf('{')))
+                        Signature = (full.Substring(0, full.IndexOf('{')))
 
-                });
+                    });
                     Console.WriteLine("Method: " + methodDeclaration.Identifier.ValueText);
                     Console.WriteLine("signature: " + full.Substring(0, full.IndexOf('{')));
                 }
@@ -69,10 +78,7 @@ Body=full});
 
                     cls.PrimaryKeyType = FindPrimaryKeyType(classDeclaration);
                 }
-
-
             }
-
 
             return cls;
         }
