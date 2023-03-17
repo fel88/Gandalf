@@ -14,7 +14,6 @@ namespace Gandalf.Processors
         {
             if (!message.ToLower().Trim().StartsWith("find "))
                 return false;
-
             var spl = message.ToLower().Split(new char[] { ' ' }).ToArray();
             if (service.Mode == BotMode.File)
             {
@@ -23,17 +22,14 @@ namespace Gandalf.Processors
                 for (int i = 0; i < ln.Length; i++)
                 {
                     if (ln[i].ToLower().Contains(spl[1]))
-                        sb.AppendLine($"{i}: " + ln[i]);
+                        sb.AppendLine($"{i + 1}: " + ln[i]);
                 }
-                await service.Bot.SendTextMessageAsync(
-            chatId: service.ChatId,
-            text: "matches: " + sb.Length + "\n" + sb.ToString(),
-            cancellationToken: service.CancellationToken);
+
+                await service.Bot.SendTextMessageAsync(chatId: service.ChatId, text: "matches: " + sb.Length + "\n" + sb.ToString(), cancellationToken: service.CancellationToken);
             }
             else
             {
                 var cd = new DirectoryInfo(service.CurrentDir);
-
                 foreach (var item in cd.GetFiles())
                 {
                     StringBuilder sb = new StringBuilder();
@@ -47,15 +43,11 @@ namespace Gandalf.Processors
                             matches++;
                         }
                     }
+
                     if (matches == 0)
                         continue;
-
-                    await service.Bot.SendTextMessageAsync(
-                chatId: service.ChatId,
-                text: $"{item.Name}\nmatches: {matches}\n{sb}",
-                cancellationToken: service.CancellationToken);
+                    await service.Bot.SendTextMessageAsync(chatId: service.ChatId, text: $"{item.Name}\nmatches: {matches}\n{sb}", cancellationToken: service.CancellationToken);
                 }
-
             }
 
             return true;
