@@ -130,27 +130,46 @@ namespace Gandalf
         public BotMode Mode { get; set; }
 
         public bool EchoMode = false;
+        long? chatId;
         async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             // Only process Message updates: https://core.telegram.org/bots/api#message
             if (update.Message is not { } message)
                 return;
 
+            chatId = message.Chat.Id;
+            if (chatId != targetChatId)
+            {
+                Console.WriteLine("unauthorized access from chatId: " + chatId);
+                return;
+            }
+
             if (message.Photo != null)
             {
-                var fId = message.Photo.Last().FileId;
-                Console.WriteLine("photo detected: " + fId);
-                var file = await Bot.GetFileAsync(fId);
-                MemoryStream ms = new MemoryStream();
-                await Bot.DownloadFileAsync(file.FilePath, ms);
-                Console.WriteLine("file path: " + file.FilePath);
-                ms.Seek(0, SeekOrigin.Begin);
-                var bmp = Image.Load(ms);
-                Console.WriteLine($"bmp detected {bmp.Width}x{bmp.Height}");
-                DecodeQRAsXml(bmp);
-                //var res = DecodeQR(bmp);
-                //Console.WriteLine("decoded: " + res);
-                //bmp.Save("1.jpg");
+                try
+                {
+                    var fId = message.Photo.Last().FileId;
+                    Console.WriteLine("photo detected: " + fId);
+                    var file = await Bot.GetFileAsync(fId);
+                    MemoryStream ms = new MemoryStream();
+                    await Bot.DownloadFileAsync(file.FilePath, ms);
+                    Console.WriteLine("file path: " + file.FilePath);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    var bmp = Image.Load(ms);
+                    Console.WriteLine($"bmp detected {bmp.Width}x{bmp.Height}");
+                    DecodeQRAsXml(bmp);
+                    //var res = DecodeQR(bmp);
+                    //Console.WriteLine("decoded: " + res);
+                    //bmp.Save("1.jpg");
+
+                }
+                catch (Exception ex)
+                {
+                    await botClient.SendTextMessageAsync(chatId: chatId, text: ex.Message, cancellationToken: cancellationToken);
+
+                    Console.WriteLine(ex.Message);
+                }
+
                 return;
             }
 
@@ -158,12 +177,6 @@ namespace Gandalf
             if (message.Text is not { } messageText)
                 return;
 
-            var chatId = message.Chat.Id;
-            if (chatId != targetChatId)
-            {
-                Console.WriteLine("unauthorized access from chatId: " + chatId);
-                return;
-            }
 
             if (EchoMode)
             {
@@ -329,14 +342,32 @@ namespace Gandalf
             }
         }
 
-        byte[] fileData;
-        List<int> chunksIds = new List<int>();
+        public class Chunk
+        {
+            public byte[] Data;
+            public int Id;
+        }
+
+
+        List<Chunk> chunks = new List<Chunk>();
         string currentFileName;
-        public void DecodeQRAsXml(Image bmp)
+        public async void DecodeQRAsXml(Image bmp)
         {
             var dd = DecodeQR(bmp);
-            if (!dd.Contains("</xml>"))
+            if (dd == null)
+            {
+                Console.WriteLine("not recognized");
+                await botClient.SendTextMessageAsync(chatId: chatId, text: "not recognized");
+
                 return;
+            }
+            if (!dd.Contains("<root>"))
+            {
+                Console.WriteLine("xml not detected");
+                await botClient.SendTextMessageAsync(chatId: chatId, text: "xml not detected");
+
+                return;
+            }
 
             var doc = XDocument.Parse(dd);
             var data = doc.Root.Element("chunk").Value;
@@ -347,32 +378,43 @@ namespace Gandalf
             var fullSize = long.Parse(ch.Attribute("fullSize").Value);
             var chunksQty = int.Parse(ch.Attribute("chunksQty").Value);
             var fileName = ch.Attribute("name").Value;
-            if (fileData == null || fileData.Length != fullSize || currentFileName != fileName)
+            if (currentFileName != fileName)
             {
-                fileData = new byte[fullSize];
-                chunksIds.Clear();
+                currentFileName = fileName;
+                chunks.Clear();
                 Console.WriteLine("new chunks started");
+                await botClient.SendTextMessageAsync(chatId: chatId, text: "new chunks started");
+
             }
-            chunksIds.Add(chunkId);
+            var dat = Convert.FromBase64String(data);
+            if (chunks.Any(z => z.Id == chunkId))
+            {
+                await botClient.SendTextMessageAsync(chatId: chatId, text: "chunk #" + chunkId + " overwrite");
+                chunks.Remove(chunks.First(z => z.Id == chunkId));
+            }
+            chunks.Add(new Chunk() { Id = chunkId, Data = dat });
 
             Console.WriteLine("chunk detected: " + chunkId);
+            await botClient.SendTextMessageAsync(chatId: chatId, text: "chunk detected:" + chunkId);
             Console.WriteLine("fullSize: " + fullSize);
             Console.WriteLine("size: " + size);
 
             var offset = long.Parse(ch.Attribute("offset").Value);
             Console.WriteLine("offset: " + offset);
-
             Console.WriteLine("name: " + fileName);
-            var dat = Convert.FromBase64String(data);
-            Array.Copy(dat, 0, fileData, offset, size);
 
-            if (chunksIds.Distinct().Count() == chunksQty)
+            if (chunks.Select(z => z.Id).Distinct().Count() == chunksQty)
             {
                 var fn = Path.GetFileName(fileName);
                 var path = Path.Combine(currentDir, fn);
-                System.IO.File.WriteAllBytes(path, fileData);
+                List<byte> fdata = new List<byte>();
+                foreach (var item in chunks.OrderBy(z => z.Id))
+                {
+                    fdata.AddRange(item.Data);
+                }
+                System.IO.File.WriteAllBytes(path, fdata.ToArray());
                 Console.WriteLine("file saved: " + path);
-
+                await botClient.SendTextMessageAsync(chatId: chatId, text: "file saved: " + path);
             }
         }
 
@@ -401,7 +443,8 @@ namespace Gandalf
                 if (parsedResult != null)
                 {
                     //btnExtendedResult.Visible = !(parsedResult is TextParsedResult);
-                    txtContent.Append("\r\n\r\nParsed result:\r\n" + parsedResult.DisplayResult + Environment.NewLine + Environment.NewLine);
+                    //txtContent.Append("\r\n\r\nParsed result:\r\n" + parsedResult.DisplayResult + Environment.NewLine + Environment.NewLine);
+                    txtContent.Append(parsedResult.DisplayResult);
                 }
                 else
                 {
@@ -417,6 +460,8 @@ namespace Gandalf
 
             reader.Options.PossibleFormats.Add(BarcodeFormat.QR_CODE);
             var result1 = reader.Decode(clone);
+            if (result1 == null || txtContent.Length == 0)
+                return null;
 
             return txtContent.ToString();
         }

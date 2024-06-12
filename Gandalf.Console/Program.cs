@@ -12,7 +12,8 @@ namespace Gandalf
             if (args.Any(z => z == "--echo"))
             {
                 bot.EchoMode = true;
-            }            
+            }
+                        
             bot.Run();
             Console.ReadLine();
         }
