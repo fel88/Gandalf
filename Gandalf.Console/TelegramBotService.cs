@@ -96,6 +96,7 @@ namespace Gandalf
             Processors.Add(new PatchCommandProcessor(this));
             Processors.Add(new PingCommandProcessor(this));
             Processors.Add(new CatCommandProcessor(this));
+            Processors.Add(new BashCommandProcessor(this));
             Processors.Add(new ParseCommandProcessor(this));
             Processors.Add(new EnterFileCommandProcessor(this));
             Processors.Add(new ExitFileCommandProcessor(this));
