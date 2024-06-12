@@ -6,12 +6,20 @@ using Telegram.Bot.Types;
 using System.Text;
 using LibGit2Sharp;
 using System.Xml.Linq;
-using Telegram.Bot.Types.InputFiles;
 using System.Threading;
 using Telegram.Bot.Requests;
 using Gandalf.Processors;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
+using System.Drawing;
+using System.Security.Cryptography;
+using SixLabors.ImageSharp;
+using ZXing.Common;
+using ZXing;
+using ZXing.ImageSharp;
+using ZXing.Client.Result;
+using SixLabors.ImageSharp.PixelFormats;
+using System.IO;
 
 namespace Gandalf
 {
@@ -127,9 +135,29 @@ namespace Gandalf
             // Only process Message updates: https://core.telegram.org/bots/api#message
             if (update.Message is not { } message)
                 return;
-            // Only process text messages
+
+            if (message.Photo != null)
+            {
+                var fId = message.Photo.Last().FileId;
+                Console.WriteLine("photo detected: " + fId);
+                var file = await Bot.GetFileAsync(fId);
+                MemoryStream ms = new MemoryStream();
+                await Bot.DownloadFileAsync(file.FilePath, ms);
+                Console.WriteLine("file path: " + file.FilePath);
+                ms.Seek(0, SeekOrigin.Begin);
+                var bmp = Image.Load(ms);
+                Console.WriteLine($"bmp detected {bmp.Width}x{bmp.Height}");
+                DecodeQRAsXml(bmp);
+                //var res = DecodeQR(bmp);
+                //Console.WriteLine("decoded: " + res);
+                //bmp.Save("1.jpg");
+                return;
+            }
+
+            // Only process text messages            
             if (message.Text is not { } messageText)
                 return;
+
             var chatId = message.Chat.Id;
             if (chatId != targetChatId)
             {
@@ -301,12 +329,105 @@ namespace Gandalf
             }
         }
 
+        byte[] fileData;
+        List<int> chunksIds = new List<int>();
+        string currentFileName;
+        public void DecodeQRAsXml(Image bmp)
+        {
+            var dd = DecodeQR(bmp);
+            if (!dd.Contains("</xml>"))
+                return;
+
+            var doc = XDocument.Parse(dd);
+            var data = doc.Root.Element("chunk").Value;
+            var ch = doc.Root.Element("chunk");
+
+            var size = long.Parse(ch.Attribute("size").Value);
+            var chunkId = int.Parse(ch.Attribute("id").Value);
+            var fullSize = long.Parse(ch.Attribute("fullSize").Value);
+            var chunksQty = int.Parse(ch.Attribute("chunksQty").Value);
+            var fileName = ch.Attribute("name").Value;
+            if (fileData == null || fileData.Length != fullSize || currentFileName != fileName)
+            {
+                fileData = new byte[fullSize];
+                chunksIds.Clear();
+                Console.WriteLine("new chunks started");
+            }
+            chunksIds.Add(chunkId);
+
+            Console.WriteLine("chunk detected: " + chunkId);
+            Console.WriteLine("fullSize: " + fullSize);
+            Console.WriteLine("size: " + size);
+
+            var offset = long.Parse(ch.Attribute("offset").Value);
+            Console.WriteLine("offset: " + offset);
+
+            Console.WriteLine("name: " + fileName);
+            var dat = Convert.FromBase64String(data);
+            Array.Copy(dat, 0, fileData, offset, size);
+
+            if (chunksIds.Distinct().Count() == chunksQty)
+            {
+                var fn = Path.GetFileName(fileName);
+                var path = Path.Combine(currentDir, fn);
+                System.IO.File.WriteAllBytes(path, fileData);
+                Console.WriteLine("file saved: " + path);
+
+            }
+        }
+
+        public static string DecodeQR(Image bmp)
+        {
+            //Image<Rgba32> image = Image.Load<Rgba32>(path);
+            //var bitmap = Image.From(stream);
+            var clone = bmp.CloneAs<Rgba32>();
+
+            var reader = new ZXing.ImageSharp.BarcodeReader<Rgba32>(null, null, source => new GlobalHistogramBinarizer(source))
+            {
+                AutoRotate = true,
+                Options = new DecodingOptions { TryHarder = true }
+            };
+            var txtContent = new StringBuilder();
+            reader.ResultFound += result =>
+            {
+                //  //txtType.Text = result.BarcodeFormat.ToString();
+                //  txtContent.Text += result.Text + Environment.NewLine;
+                if (result.ResultMetadata.ContainsKey(ResultMetadataType.UPC_EAN_EXTENSION))
+                {
+                    //txtContent.Text += " UPC/EAN Extension: " + result.ResultMetadata[ResultMetadataType.UPC_EAN_EXTENSION].ToString();
+                }
+                // lastResults.Add(result);
+                var parsedResult = ResultParser.parseResult(result);
+                if (parsedResult != null)
+                {
+                    //btnExtendedResult.Visible = !(parsedResult is TextParsedResult);
+                    txtContent.Append("\r\n\r\nParsed result:\r\n" + parsedResult.DisplayResult + Environment.NewLine + Environment.NewLine);
+                }
+                else
+                {
+                    //btnExtendedResult.Visible = false;
+                }
+            };
+
+            var possibleFormats = new List<BarcodeFormat> { BarcodeFormat.QR_CODE };
+            var previousFormats = reader.Options.PossibleFormats;
+
+            if (possibleFormats != null)
+                reader.Options.PossibleFormats = possibleFormats;
+
+            reader.Options.PossibleFormats.Add(BarcodeFormat.QR_CODE);
+            var result1 = reader.Decode(clone);
+
+            return txtContent.ToString();
+        }
+
         Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
             var ErrorMessage = exception switch
             {
                 ApiRequestException apiRequestException => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
-                _ => exception.ToString()};
+                _ => exception.ToString()
+            };
             Console.WriteLine(ErrorMessage);
             return Task.CompletedTask;
         }

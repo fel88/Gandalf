@@ -1,5 +1,5 @@
 using Telegram.Bot;
-using Telegram.Bot.Types.InputFiles;
+using Telegram.Bot.Types;
 
 namespace Gandalf.Processors
 {
@@ -22,8 +22,7 @@ namespace Gandalf.Processors
                 var path = Path.Combine(service.CurrentDir, add);
                 using (var r = System.IO.File.OpenRead(path))
                 {
-                    InputOnlineFile file = new InputOnlineFile(r, Path.GetFileName(path));
-
+                    var file = new InputFileStream(r, Path.GetFileName(path));
                     await service.Bot.SendPhotoAsync(
                     chatId: service.ChatId,
                     photo: file,

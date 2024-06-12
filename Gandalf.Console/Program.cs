@@ -1,4 +1,6 @@
-﻿namespace Gandalf
+﻿using SixLabors.ImageSharp;
+
+namespace Gandalf
 {
     class Program
     {
@@ -10,9 +12,8 @@
             if (args.Any(z => z == "--echo"))
             {
                 bot.EchoMode = true;
-            }
+            }            
             bot.Run();
-
             Console.ReadLine();
         }
     }
