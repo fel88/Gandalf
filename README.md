@@ -63,7 +63,7 @@ Host machine:
 
 Telegram bot:
 6. Unzip file (bash 7z x <file_name>)
-7. apply changes to target repository: git apply --reject --ignore-space-change --ignore-whitespace changes.patch
+7. apply changes to target repository: bash git apply --reject --ignore-space-change --ignore-whitespace changes.patch
 8. remove changes.zip and changes.patch (bash rm changes.*)
 9. bash git add .
 10. bash git commit -m '<text>'
