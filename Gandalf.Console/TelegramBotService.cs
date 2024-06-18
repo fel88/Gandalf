@@ -173,6 +173,29 @@ namespace Gandalf
                 return;
             }
 
+            if (message.Document != null)
+            {
+                try
+                {
+                    var fId = message.Document.FileId;
+                    Console.WriteLine("document detected: " + fId);
+                    var file = await Bot.GetFileAsync(fId);
+                    MemoryStream ms = new MemoryStream();
+                    await Bot.DownloadFileAsync(file.FilePath, ms);
+                    Console.WriteLine("file path: " + file.FilePath);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    var doc = XDocument.Load(ms);
+                    DecodeXmlChunk(doc);
+                }
+                catch (Exception ex)
+                {
+                    await botClient.SendTextMessageAsync(chatId: chatId, text: ex.Message, cancellationToken: cancellationToken);
+
+                    Console.WriteLine(ex.Message);
+                }
+
+                return;
+            }
             // Only process text messages            
             if (message.Text is not { } messageText)
                 return;
@@ -351,6 +374,7 @@ namespace Gandalf
 
         List<Chunk> chunks = new List<Chunk>();
         string currentFileName;
+        long currentFullSize;
         public async void DecodeQRAsXml(Image bmp)
         {
             var dd = DecodeQR(bmp);
@@ -369,7 +393,16 @@ namespace Gandalf
                 return;
             }
 
-            var doc = XDocument.Parse(dd);
+            DecodeXmlChunk(dd);
+        }
+
+        public void DecodeXmlChunk(string dd)
+        {
+            DecodeXmlChunk(XDocument.Parse(dd));
+        }
+
+        public async void DecodeXmlChunk(XDocument doc)
+        {
             var data = doc.Root.Element("chunk").Value;
             var ch = doc.Root.Element("chunk");
 
@@ -378,9 +411,10 @@ namespace Gandalf
             var fullSize = long.Parse(ch.Attribute("fullSize").Value);
             var chunksQty = int.Parse(ch.Attribute("chunksQty").Value);
             var fileName = ch.Attribute("name").Value;
-            if (currentFileName != fileName)
+            if (currentFileName != fileName || currentFullSize != fullSize)
             {
                 currentFileName = fileName;
+                currentFullSize = fullSize;
                 chunks.Clear();
                 Console.WriteLine("new chunks started");
                 await botClient.SendTextMessageAsync(chatId: chatId, text: "new chunks started");
