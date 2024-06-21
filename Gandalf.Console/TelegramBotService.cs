@@ -128,6 +128,8 @@ namespace Gandalf
         public int CurrentFileLine { get; set; }
 
         public BotMode Mode { get; set; }
+        public FileReceiveMode FileReceiveMode { get; set; }
+
 
         public bool EchoMode = false;
         long? chatId;
@@ -184,8 +186,19 @@ namespace Gandalf
                     await Bot.DownloadFileAsync(file.FilePath, ms);
                     Console.WriteLine("file path: " + file.FilePath);
                     ms.Seek(0, SeekOrigin.Begin);
-                    var doc = XDocument.Load(ms);
-                    DecodeXmlChunk(doc);
+                    if (FileReceiveMode == FileReceiveMode.QR)
+                    {
+                        var doc = XDocument.Load(ms);
+                        DecodeXmlChunk(doc);
+                    }
+                    else
+                    {
+                        var fn = Path.GetFileName(message.Document.FileName);
+                        var path = Path.Combine(currentDir, fn);
+                        System.IO.File.WriteAllBytes(path,ms.ToArray());
+                        Console.WriteLine($"file saved: {path}");
+                        await botClient.SendTextMessageAsync(chatId: chatId, text: $"file saved: {path}");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -302,6 +315,18 @@ namespace Gandalf
                 var cmt = rep.Commits.First();
                 gs.Checkout(cmt);
                 Message sentMessage = await botClient.SendTextMessageAsync(chatId: chatId, text: "done", cancellationToken: cancellationToken);
+            }
+            else if (messageText.StartsWith("file.mode"))
+            {
+                if (messageText.Contains("qr"))
+                {
+                    FileReceiveMode = FileReceiveMode.QR;
+                }
+                else if (messageText.Contains("raw"))
+                {
+                    FileReceiveMode = FileReceiveMode.Raw;
+                }
+                Message sentMessage = await botClient.SendTextMessageAsync(chatId: chatId, text: $"file receive mode: {FileReceiveMode}", cancellationToken: cancellationToken);
             }
             else if (messageText.StartsWith("cd.."))
             {

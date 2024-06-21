@@ -26,10 +26,20 @@ namespace Gandalf.Processors
             var err = process.StandardError.ReadToEnd();
             process.WaitForExit();
 
-            await service.Bot.SendTextMessageAsync(
-       chatId: service.ChatId,
-       text: "status:\n" + res,
-       cancellationToken: service.CancellationToken);
+            if (!string.IsNullOrEmpty(res))
+            {
+                await service.Bot.SendTextMessageAsync(
+           chatId: service.ChatId,
+           text: "result:\n" + res,
+           cancellationToken: service.CancellationToken);
+            }
+            if (!string.IsNullOrEmpty(err))
+            {
+                await service.Bot.SendTextMessageAsync(
+           chatId: service.ChatId,
+           text: "error:\n" + err,
+           cancellationToken: service.CancellationToken);
+            }
 
             return true;
         }

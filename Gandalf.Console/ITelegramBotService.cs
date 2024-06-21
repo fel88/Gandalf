@@ -12,8 +12,4 @@ namespace Gandalf
         CancellationToken CancellationToken { get; }
         BotMode Mode { get; set; }
     }
-    public enum BotMode
-    {
-        Dir, File
-    }
 }
